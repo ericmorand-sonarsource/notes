@@ -4,7 +4,7 @@ While reviewing and challenging the changes made to add ESM support to SonarJS E
 
 ## Reproducer
 
-The minimal way to reproduce the issue is to execute with `tsx` the comment-based test of rule S2004, alongside the unit test of rule S105, while requesting V8 to emit the coverage data, and inspect the coverage data files themselves.
+The minimal way to reproduce the issue is to execute, using `tsx`, the comment-based test of rule S2004, alongside the unit test of rule S105, while requesting V8 to emit the coverage data, and inspect the coverage data files themselves.
 
 ```shell
 rm coverage -rf && NODE_V8_COVERAGE=coverage tsx packages/jsts/src/rules/S105/unit.test.ts && NODE_V8_COVERAGE=coverage tsx packages/jsts/src/rules/S2004/cb.test.ts
@@ -98,7 +98,7 @@ We can see that, according to this coverage data file, V8 executed two different
 
 ## Consequence
 
-The consequence of this messy coverage data is that it makes code coverage tool incapable to report coverage reliably.
+The consequence of this messy coverage data is that it makes code coverage tools leveraging V8 coverage data incapable to report coverage reliably.
 
 This problem can easily be noticed by asking One Double Zero to generate a coverage report for `packages/jsts/src/rules/S105/rule.ts` after executing only its unit test script, and then after executing both its unit test script and S2004 comment-based one.
 
@@ -135,7 +135,7 @@ All files |   14.28 |        0 |       0 |   14.28 |
 ----------|---------|----------|---------|---------|-------------------
 ```
 
-When executing S2004 comment-based script and, then, S105 unit test script, One Double Zero reports that `packages/jsts/src/rules/S105/rule.ts` is partially covered.
+When inverting the order of execution of the tests - that is when executing S2004 comment-based script and, then, S105 unit test script, One Double Zero reports that `packages/jsts/src/rules/S105/rule.ts` is partially covered.
 
 ```shell
 rm coverage -rf && \
@@ -152,7 +152,7 @@ All files |   85.71 |       50 |     100 |   85.71 |
 ----------|---------|----------|---------|---------|-------------------
 ```
 
-To better highlight that those inconsistencies are induced by comment-based tests, let's execute S105 unit test script instead of its comment based one. In this case, regardless of the order of execution of the tests, the result is the same: One Double Zero reports that `packages/jsts/src/rules/S105/rule.ts` is entirely covered.
+To better highlight that those inconsistencies are induced by comment-based tests, let's execute S2004 unit test script instead of its comment based one. In this case, regardless of the order of execution of the tests, the result is the same: One Double Zero reports that `packages/jsts/src/rules/S105/rule.ts` is entirely covered.
 
 ```shell
 rm coverage -rf && \
@@ -185,12 +185,6 @@ There are two different issues that need to be investigated:
 ### Issue #1
 
 Comment-based tests are executed by the `check` function that is exported by the module `packages/jsts/tests/tools/testers/comment-based/checker.ts`. This module imports some other modules, and ultimately ends up importing the whole set of available rules. This explains why `packages/jsts/src/rules/S105/rule.ts` script ends up being executed by V8. Looking at the coverage data file, we can see that this is also the case for all the other rules modules.
-
-```text
-cb.test.ts
-->
-packages/jsts/tests/tools/testers/comment-based/checker.ts
-```
 
 ### Issue #2
 
